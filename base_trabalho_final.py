@@ -47,3 +47,5 @@ fig.update_layout(
 )
 
 fig.show()
+
+#omaga
