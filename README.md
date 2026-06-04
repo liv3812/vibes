@@ -16,9 +16,9 @@ git pull
 
 3- Para que suas alterações/adições apareçam no github, dê os seguintes comandos no terminal:
 
-git add.
-git commit -m "nome do seu commit"
-git push- u origin main
+- git add.
+- git commit -m "nome do seu commit"
+- git push- u origin main
 
 
 Atenção: sempre que for mexer no código, dê o comando git pull no terminal antes para puxar as modificações que seus colegas fizeram para dentro do seu computador!
