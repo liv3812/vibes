@@ -48,4 +48,7 @@ fig.update_layout(
 
 fig.show()
 
+<<<<<<< Updated upstream
 #omaga2222
+=======
+>>>>>>> Stashed changes
