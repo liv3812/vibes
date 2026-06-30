@@ -311,3 +311,158 @@ ts0 = tempo_pico_analitico(WN0, XI0)
 print(f"\nBaseline  →  m={M0:.1f} kg | k={K0:.1f} N/m | c={C0:.2f} N·s/m")
 print(f"             ωn={WN0:.3f} rad/s | fn={WN0/(2*np.pi):.3f} Hz | ξ={XI0:.4f}")
 print(f"             t* = {ts0*1000:.2f} ms | h(t*) = {h_base:.6f} 1/kg")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ANÁLISE COMBINADA: PERMUTAÇÃO ENTRE MASSA E RIGIDEZ
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Variações desejadas
+var_m = np.array([-0.30, -0.25, -0.20, -0.15, -0.10, 0.00])
+var_k = np.array([-0.30, -0.25, -0.20, -0.15, -0.10, 0.00, 0.10, 0.20])
+
+resultados = []
+
+for dm in var_m:
+    for dk in var_k:
+        m = M0 * (1 + dm)
+        k = K0 * (1 + dk)
+        c = C0
+
+        wn = np.sqrt(k / m)
+        xi = c / (2 * m * wn)
+        hp = h_pico(m, wn, xi)
+        ts = tempo_pico_analitico(wn, xi)
+
+        resultados.append({
+            "dm": dm,
+            "dk": dk,
+            "m": m,
+            "k": k,
+            "c": c,
+            "wn": wn,
+            "fn": wn / (2*np.pi),
+            "xi": xi,
+            "hp": hp,
+            "ts": ts,
+            "delta_hp": (hp - h_base) / h_base * 100
+        })
+
+# Ordena pelos menores picos
+resultados_ordenados = sorted(resultados, key=lambda x: x["hp"])
+
+print("\n" + "═"*95)
+print("MELHORES COMBINAÇÕES DE MASSA E RIGIDEZ — MENOR PICO h(t*)")
+print("═"*95)
+print(f"{'m (%)':>8} {'k (%)':>8} {'m (kg)':>10} {'k (N/m)':>12} {'ξ':>8} {'fn (Hz)':>9} {'h(t*)':>12} {'Δh (%)':>10}")
+print("─"*95)
+
+for r in resultados_ordenados[:12]:
+    print(
+        f"{r['dm']*100:>+8.0f} "
+        f"{r['dk']*100:>+8.0f} "
+        f"{r['m']:>10.2f} "
+        f"{r['k']:>12.1f} "
+        f"{r['xi']:>8.4f} "
+        f"{r['fn']:>9.3f} "
+        f"{r['hp']:>12.6f} "
+        f"{r['delta_hp']:>+10.2f}"
+    )
+
+print("═"*95)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MATRIZES PARA MAPAS DE CALOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+M_grid = np.zeros((len(var_m), len(var_k)))
+XI_grid = np.zeros((len(var_m), len(var_k)))
+HP_grid = np.zeros((len(var_m), len(var_k)))
+DELTA_grid = np.zeros((len(var_m), len(var_k)))
+
+for i, dm in enumerate(var_m):
+    for j, dk in enumerate(var_k):
+        m = M0 * (1 + dm)
+        k = K0 * (1 + dk)
+        c = C0
+
+        wn = np.sqrt(k / m)
+        xi = c / (2 * m * wn)
+        hp = h_pico(m, wn, xi)
+
+        XI_grid[i, j] = xi
+        HP_grid[i, j] = hp
+        DELTA_grid[i, j] = (hp - h_base) / h_base * 100
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIGURA: MASSA x RIGIDEZ
+# ══════════════════════════════════════════════════════════════════════════════
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+x_labels = [f"{dk*100:+.0f}%" for dk in var_k]
+y_labels = [f"{dm*100:+.0f}%" for dm in var_m]
+
+# ---------------------------------------------------------------------------
+# Mapa 1: pico da resposta
+# ---------------------------------------------------------------------------
+im0 = axes[0].imshow(DELTA_grid, cmap="RdYlGn_r", aspect="auto")
+
+axes[0].set_title("Redução do Pico h(t*)\nPermutação Massa × Rigidez", fontweight="bold")
+axes[0].set_xlabel("Variação de rigidez k")
+axes[0].set_ylabel("Variação de massa m")
+axes[0].set_xticks(np.arange(len(var_k)))
+axes[0].set_yticks(np.arange(len(var_m)))
+axes[0].set_xticklabels(x_labels)
+axes[0].set_yticklabels(y_labels)
+
+for i in range(len(var_m)):
+    for j in range(len(var_k)):
+        axes[0].text(
+            j, i,
+            f"{DELTA_grid[i, j]:+.1f}%",
+            ha="center", va="center",
+            fontsize=8, color="black"
+        )
+
+cbar0 = fig.colorbar(im0, ax=axes[0])
+cbar0.set_label("Variação do pico em relação ao baseline (%)")
+
+
+# ---------------------------------------------------------------------------
+# Mapa 2: fator de amortecimento xi
+# ---------------------------------------------------------------------------
+im1 = axes[1].imshow(XI_grid, cmap="viridis", aspect="auto")
+
+axes[1].set_title("Fator de Amortecimento ξ\nPermutação Massa × Rigidez", fontweight="bold")
+axes[1].set_xlabel("Variação de rigidez k")
+axes[1].set_ylabel("Variação de massa m")
+axes[1].set_xticks(np.arange(len(var_k)))
+axes[1].set_yticks(np.arange(len(var_m)))
+axes[1].set_xticklabels(x_labels)
+axes[1].set_yticklabels(y_labels)
+
+for i in range(len(var_m)):
+    for j in range(len(var_k)):
+        axes[1].text(
+            j, i,
+            f"{XI_grid[i, j]:.3f}",
+            ha="center", va="center",
+            fontsize=8, color="white"
+        )
+
+cbar1 = fig.colorbar(im1, ax=axes[1])
+cbar1.set_label("Fator de amortecimento ξ")
+
+plt.suptitle(
+    "Análise Combinada de Massa e Rigidez — Suspensão Baja SAE",
+    fontsize=14,
+    fontweight="bold"
+)
+
+plt.tight_layout()
+plt.savefig("permutacao_massa_rigidez.png", dpi=150, bbox_inches="tight")
+plt.show()
+
+print("\nFigura salva em: permutacao_massa_rigidez.png")
